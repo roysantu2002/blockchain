@@ -1,0 +1,14 @@
+//Block data model
+{
+   "hash": "",
+   "height": 0,
+   "body": [],
+   "time": 0,
+   "previousblockhash": ""
+ }
+
+ let blockChain = new Blockchain()
+undefined
+> blockChain.addBlock(new Block("test one"))
+undefined
+> blockChain.chain
