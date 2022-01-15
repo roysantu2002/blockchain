@@ -142,7 +142,6 @@ class Blockchain {
     let self = this;
 
     return new Promise(async (resolve, reject) => {
-      console.log("test");
       try {
         // get and validate time from `message`
         const messageTime = parseInt(message.split(":")[1]);
@@ -155,9 +154,6 @@ class Blockchain {
         const currentTime = parseInt(
           new Date().getTime().toString().slice(0, -3)
         );
-
-        console.log(messageTime);
-        console.log(currentTime - 5 * 60);
         if (currentTime - 5 * 60 > messageTime) {
           throw new Error(
             "Message is old. Request new message and resubmit the request"
@@ -166,7 +162,6 @@ class Blockchain {
 
         // verify message
         if (!bitcoinMessage.verify(message, address, signature)) {
-          console.log("error");
           throw new Error("Message verification failed");
         }
 
@@ -175,7 +170,6 @@ class Blockchain {
           owner: address,
           star: star,
         };
-        console.log(data);
 
         resolve(await self._addBlock(new BlockClass.Block(data)));
       } catch (e) {
@@ -193,7 +187,7 @@ class Blockchain {
   getBlockByHash(hash) {
     let self = this;
     return new Promise((resolve, reject) => {
-      resolve(self.chain.filter((b) => b.hash === hash)[0] || null);
+      resolve(self.chain.find((b) => b.hash === hash) || null);
     });
   }
 
@@ -246,32 +240,38 @@ class Blockchain {
     let self = this;
     let errorLog = [];
     return new Promise(async (resolve, reject) => {
-      // in case that there is only the Genesis block, we dont validate the blockchain
-      if (self.chain.length > 1) {
-        // we start from last block
-        let block = self.chain[self.chain.length - 1];
-        while (block) {
-          if (!(await block.validate())) {
-            errorLog.push(`Block with hash ${block.hash} is invalid`);
-          }
-          // and go all the way from back to the Genesis block
-          block = await self.getBlockByHash(block.previousBlockHash);
-
-          // if we hit the Genesis block, get out of the loop
-          if (block.height === 0) {
-            break;
+      let promises = [];
+      let chainIndex = 0;
+      self.chain.forEach((block) => {
+        promises.push(block.validate());
+        if (block.height > 0) {
+          let previousBlockHash = block.previousBlockHash;
+          let blockHash = self.chain[chainIndex - 1].hash;
+          if (blockHash !== previousBlockHash) {
+            errorLog.push(
+              `Error - Block Heigh: ${block.height} - Previous Hash don't match.`
+            );
           }
         }
-        // suppose we are now out of the while-loop,
-        // we need to check if the last seen block is the Genesis block
-        if (block.height !== 0) {
-          errorLog.push(
-            `Blockchain is broken. Last seen block with hash. ${block.hash}`
-          );
-        }
-      }
-
-      resolve(errorLog);
+        chainIndex++;
+      });
+      Promise.all(promises)
+        .then((results) => {
+          chainIndex = 0;
+          results.forEach((valid) => {
+            if (!valid) {
+              errorLog.push(
+                `Error - Block Heigh: ${self.chain[chainIndex].height} - Has been Tampered.`
+              );
+            }
+            chainIndex++;
+          });
+          resolve(errorLog);
+        })
+        .catch((err) => {
+          console.log(err);
+          reject(err);
+        });
     });
   }
 }

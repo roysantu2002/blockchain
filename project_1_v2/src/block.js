@@ -37,18 +37,9 @@ class Block {
   validate() {
     let self = this;
     return new Promise((resolve, reject) => {
-      // Save in auxiliary variable the current block hash
-      const currentHash = self.hash;
-      self.hash = null;
-      // Recalculate the hash of the Block
-      const recalculateHash = SHA256(JSON.stringify(self)).toString();
-      self.hash = currentHash;
-      // Comparing if the hashes changed
-      // Returning the Block is not valid
-
-      // Returning the Block is valid
-
-      resolve(currentHash === recalculateHash);
+      let clonedBlock = { ...self, hash: null };
+      let newHash = SHA256(JSON.stringify(clonedBlock)).toString();
+      resolve(self.hash === newHash);
     });
   }
 
@@ -75,7 +66,7 @@ class Block {
         // Parse the data to an object to be retrieve.
 
         // I think we can use Buffer directly instead of hex2ascii module
-        resolve(JSON.parse(JSON.parse(hex2ascii(this.body)).toString()));
+        resolve(JSON.parse(hex2ascii(this.body)));
       } catch (e) {
         reject(e);
       }
